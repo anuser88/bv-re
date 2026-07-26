@@ -10,7 +10,6 @@ using System.Text.Json;
 
 class Program {
 	static async Task Main() {
-		Console.WriteLine("haha");
 		Buff buff = new();
 		await buff.SetTarget(-1);
 		await buff.GetProxies();
@@ -147,7 +146,7 @@ public class Buff {
 	private async Task RunProxyWorker(int id) {
 		HttpClient client = ProxiedClients?[id]!;
 		try {
-			var res = await client?.PostAsync("https://api.scratch.mit.edu/users/thanh_cundz/projects/1334396955/views", Payload)!;
+			var res = await client?.PostAsync(Target, Payload)!;
 			int statusCode = (int)res.StatusCode;
 			if (statusCode == 200 || statusCode == 429) {
 				Console.WriteLine($"received: {statusCode} {id}");
