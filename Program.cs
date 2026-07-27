@@ -16,10 +16,8 @@ class Program {
 		await buff.GetProxies();
 		await buff.TestProxies();
 		await Task.Delay(2000);
-		int round = 0;
 		while (true) {
-			await buff.RunProxies(round++);
-			round %= 6;
+			await buff.RunProxies();
 		}
 	}
 }
@@ -60,7 +58,6 @@ public class Buff {
 	];
 	private static HttpClient UnproxiedClient = new();
 	private static List<HttpClient>? ProxiedClients;
-	private static List<bool>? AdvancedProxies;
 	private static List<string>? ProxiesToUse;
 	private static StringContent? Payload;
 	private static string Target = "https://api.scratch.mit.edu/users/thanh_cundz/projects/1334396955/views";
@@ -110,33 +107,26 @@ public class Buff {
 		int clientsCount = ProxiedClients.Count;
 		if (clientsCount == 0) throw new Exception("No proxy found!");
 		HashSet<int> liveSet = new();
-		int[] proxiesInfo = new int[clientsCount];
 		for (int j = 0; j < 3; j++) {
-			Task<int[]>[] workers = new Task<int[]>[clientsCount];
+			Task<int>[] workers = new Task<int>[clientsCount];
 			for (int i = 0; i < clientsCount; i++) {
 				workers[i] = TestProxyWorker(i);
 			}
-			foreach (int[] status in await Task.WhenAll(workers)) {
-				if (status[0] >= 0)
-					liveSet.Add(status[0]);
-				if (status[1] == 1)
-					proxiesInfo[status[0]]++;
+			foreach (int id in await Task.WhenAll(workers)) {
+				if (id >= 0)
+					liveSet.Add(id);
 			}
 		}
-		AdvancedProxies = proxiesInfo
-			.Select(x => x == 3)
-			.ToList();
 		for (int i = clientsCount-1; i >= 0; i--) {
 			if (!liveSet.Contains(i)) {
 				ProxiedClients?[i].Dispose();
 				ProxiedClients?.RemoveAt(i);
-				AdvancedProxies?.RemoveAt(i);
 			}
 		}
 		Console.WriteLine($"total {ProxiedClients?.Count} live proxies");
 		ProxiesToUse = null;
 	}
-	private async Task<int[]> TestProxyWorker(int id) {
+	private async Task<int> TestProxyWorker(int id) {
 		HttpClient client = ProxiedClients?[id]!;
 		try {
 			var res = await client?.PostAsync(Target, Payload)!;
@@ -144,24 +134,21 @@ public class Buff {
 			if (statusCode == 200 || statusCode == 429) {
 				Console.WriteLine($"works: {id}");
 			}
-			return new int[] {id, statusCode == 200 ? 1 : 0};
+			return id;
 		} catch {
-			return new int[] {-1, 0};
+			return -1;
 		}
 	}
-	public async Task RunProxies(int round) {
+	public async Task RunProxies() {
 		int clientsCount = (int)ProxiedClients?.Count!;
 		if (clientsCount == 0) throw new Exception("No live proxy found!");
 		Task[] workers = new Task[clientsCount];
-		bool cancel = false;
 		for (int i = 0; i < clientsCount; i++) {
-			cancel = !(round == 0 || AdvancedProxies![i]);
-			workers[i] = RunProxyWorker(i, cancel);
+			workers[i] = RunProxyWorker(i);
 		}
 		await Task.WhenAll(workers);
 	}
-	private async Task RunProxyWorker(int id, bool cancel) {
-		if (cancel) return;
+	private async Task RunProxyWorker(int id) {
 		HttpClient client = ProxiedClients?[id]!;
 		try {
 			var res = await client?.PostAsync(Target, Payload)!;
