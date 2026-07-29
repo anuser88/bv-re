@@ -157,23 +157,56 @@ public class Buff {
 		} catch {}
 	}
 	public async Task SetTarget(int id) {
-		int trueId = id;
-		if (trueId == -1) {
-			Console.Write("Enter project ID: ");
-			if (!int.TryParse(Console.ReadLine(), out trueId)) {
-				trueId = -1;
-			}
-		}
-		if (trueId == -2) {
-			Target = "https://api.scratch.mit.edu/users/thanh_cundz/projects/1334396955/views";
-			return;
-		}
-		JsonDocument projectData = JsonDocument.Parse(
-			await UnproxiedClient.GetStringAsync($"https://api.scratch.mit.edu/projects/{trueId}")
-		);
-		JsonElement author = projectData.RootElement.GetProperty("author");
-		string projectAuthorUsername = author.GetProperty("username").GetString()!;
-		Target = $"https://api.scratch.mit.edu/users/{projectAuthorUsername}/projects/{trueId}/views";
-		Console.WriteLine(Target);
-	}
+    int trueId = id;
+    
+    // 1. LỚP BẢO VỆ ĐẦU VÀO: Ép người dùng nhập đúng số mới cho đi tiếp
+    if (trueId == -1) {
+        while (true) {
+            Console.Write("Enter project ID: ");
+            string input = Console.ReadLine() ?? "";
+            
+            // Kiểm tra xem input có phải là số và phải lớn hơn 0
+            if (int.TryParse(input, out trueId) && trueId > 0) {
+                break; // Nhập đúng số hợp lệ -> Thoát vòng lặp để chạy tiếp
+            }
+            
+            // Dành cho lối tắt -2 của tác giả (nếu bạn vẫn muốn giữ)
+            if (input == "-2") {
+                trueId = -2;
+                break;
+            }
+            
+            // Nếu nhập sai, báo lỗi và vòng lặp sẽ bắt nhập lại
+            Console.WriteLine("[-] Lỗi: ID dự án không hợp lệ. Vui lòng chỉ nhập các con số (VD: 12345678)!");
+        }
+    }
+
+    if (trueId == -2) {
+        Target = "https://api.scratch.mit.edu/users/thanh_cundz/projects/1334396955/views";
+        Console.WriteLine($"[+] Target: {Target}");
+        return;
+    }
+
+    // 2. LỚP BẢO VỆ API: Dùng Try/Catch để tránh văng app khi không tìm thấy project
+    try {
+        string jsonResponse = await UnproxiedClient.GetStringAsync($"https://api.scratch.mit.edu/projects/{trueId}");
+        JsonDocument projectData = JsonDocument.Parse(jsonResponse);
+        
+        JsonElement author = projectData.RootElement.GetProperty("author");
+        string projectAuthorUsername = author.GetProperty("username").GetString()!;
+        
+        Target = $"https://api.scratch.mit.edu/users/{projectAuthorUsername}/projects/{trueId}/views";
+        Console.WriteLine($"[+] Target: {Target}");
+    }
+    catch (HttpRequestException) {
+        // Lỗi này xảy ra khi máy chủ Scratch trả về 404 (ID không tồn tại) hoặc mất mạng
+        Console.WriteLine("\n[-] LỖI NGHIÊM TRỌNG: Không tìm thấy Project này trên Scratch hoặc mất mạng internet.");
+        Console.WriteLine("Chương trình sẽ dừng lại. Vui lòng mở lại và nhập đúng ID!");
+        Environment.Exit(0); // Dừng chương trình một cách êm ái thay vì Crash tung tóe
+    }
+    catch (Exception ex) {
+        // Bắt tất cả các lỗi không lường trước được (Ví dụ lỗi giải mã JSON)
+        Console.WriteLine($"\n[-] Lỗi không xác định: {ex.Message}");
+        Environment.Exit(0);
+    }
 }
