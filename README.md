@@ -1,8 +1,8 @@
-# 🚀 Tên Dự Án Của Bạn
+# 🚀 SCRATCH BOOSTING VIEW
 ![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 
-Một đoạn mô tả ngắn gọn về dự án của bạn. Ví dụ: "Đây là một công cụ giúp tự động tăng lượt xem cho các project trên Scratch bằng cách sử dụng Proxy."
+Đây là một công cụ giúp tự động tăng lượt xem cho các project trên Scratch bằng cách sử dụng Proxy. Vui lòng không lạm dụng.
 
 ## 📋 Mục lục
 - [Tính năng](#-tính-năng)
