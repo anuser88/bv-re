@@ -1,6 +1,6 @@
 # 🚀 SCRATCH BOOSTING VIEW
 ![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
-![License](https://img.shields.io/badge/license-MIT-green.svg)
+![License](https://img.shields.io/badge/license-AGPL_v3-red)
 
 Đây là một công cụ giúp tự động tăng lượt xem cho các project trên Scratch bằng cách sử dụng Proxy. Vui lòng không lạm dụng.
 
