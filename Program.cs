@@ -9,6 +9,8 @@ using System.Threading.Tasks;
 using System.Text;
 using System.Text.Json;
 
+namespace bvre;
+
 class Program {
 	static async Task Main() {
 		Buff buff = new();
