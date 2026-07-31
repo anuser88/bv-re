@@ -127,7 +127,7 @@ public class Buff {
 				ProxiedClients?.RemoveAt(i);
 			}
 		}
-		Console.WriteLine($"total {ProxiedClients?.Count} live proxies");
+		Console.WriteLine($"Tìm thấy tổng cộng {ProxiedClients?.Count} proxy hoạt động");
 		ProxiesToUse = null;
 	}
 	private async Task<int> TestProxyWorker(int id) {
