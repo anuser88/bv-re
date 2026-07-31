@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,8 +8,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Text;
 using System.Text.Json;
-
-namespace bvre;
 
 class Program {
 	static async Task Main() {
@@ -72,10 +70,10 @@ public class Buff {
 				.Replace("socks5://", "")
 				.Replace("https://", "")
 				.Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries);
-			Console.WriteLine($"Fetched {proxies.Length} proxies from {ProxiesSource}");
+			Console.WriteLine($"Lấy được {proxies.Length} proxy từ nguồn {ProxiesSource}");
 			return proxies;
 		} catch {
-			Console.WriteLine($"Failed to fetch {ProxiesSource}");
+			Console.WriteLine($"Không thể lấy proxy từ nguồn {ProxiesSource}");
 			return new string[0];
 		}
 	}
@@ -107,7 +105,11 @@ public class Buff {
 			ProxiedClients.Add(ProxiedClient);
 		}
 		int clientsCount = ProxiedClients.Count;
-		if (clientsCount == 0) throw new Exception("No proxy found!");
+		if (clientsCount == 0) {
+			Console.WriteLine("[-] Lỗi: Không có proxy nào được tìm thấy! Hãy kiểm tra lại kết nối của bạn.");
+			Console.ReadLine(); // Cho người dùng biết
+			Environment.Exit(0);
+		}
 		HashSet<int> liveSet = new();
 		for (int j = 0; j < 3; j++) {
 			Task<int>[] workers = new Task<int>[clientsCount];
@@ -134,7 +136,7 @@ public class Buff {
 			var res = await client?.PostAsync(Target, Payload)!;
 			int statusCode = (int)res.StatusCode;
 			if (statusCode == 200 || statusCode == 429) {
-				Console.WriteLine($"works: {id}");
+				Console.WriteLine($"Tìm thấy proxy hoạt động: {id}");
 			}
 			return id;
 		} catch {
@@ -143,7 +145,11 @@ public class Buff {
 	}
 	public async Task RunProxies() {
 		int clientsCount = (int)ProxiedClients?.Count!;
-		if (clientsCount == 0) throw new Exception("No live proxy found!");
+		if (clientsCount == 0) {
+			Console.WriteLine("[-] Lỗi: Không có proxy hoạt động nào được tìm thấy!");
+			Console.ReadLine(); // Cho người dùng biết
+			Environment.Exit(0);
+		}
 		Task[] workers = new Task[clientsCount];
 		for (int i = 0; i < clientsCount; i++) {
 			workers[i] = RunProxyWorker(i);
@@ -155,27 +161,62 @@ public class Buff {
 		try {
 			var res = await client?.PostAsync(Target, Payload)!;
 			int statusCode = (int)res.StatusCode;
-			Console.WriteLine($"received: {statusCode} {id}");
+			Console.WriteLine($"Đã nhận phản hồi từ proxy: {statusCode} {id}");
 		} catch {}
 	}
 	public async Task SetTarget(int id) {
-		int trueId = id;
-		if (trueId == -1) {
-			Console.Write("Enter project ID: ");
-			if (!int.TryParse(Console.ReadLine(), out trueId)) {
-				trueId = -1;
-			}
-		}
-		if (trueId == -2) {
-			Target = "https://api.scratch.mit.edu/users/thanh_cundz/projects/1334396955/views";
-			return;
-		}
-		JsonDocument projectData = JsonDocument.Parse(
-			await UnproxiedClient.GetStringAsync($"https://api.scratch.mit.edu/projects/{trueId}")
-		);
-		JsonElement author = projectData.RootElement.GetProperty("author");
-		string projectAuthorUsername = author.GetProperty("username").GetString()!;
-		Target = $"https://api.scratch.mit.edu/users/{projectAuthorUsername}/projects/{trueId}/views";
-		Console.WriteLine(Target);
-	}
+    int trueId = id;
+    
+    // 1. LỚP BẢO VỆ ĐẦU VÀO: Ép người dùng nhập đúng số mới cho đi tiếp
+    if (trueId == -1) {
+        while (true) {
+            Console.Write("Nhập ID dự án (VD: 12345678): ");
+            string input = Console.ReadLine() ?? "";
+
+			// Dành cho lối tắt -2 của tác giả (nếu bạn vẫn muốn giữ), đảo lên đầu
+            if (input == "-2") {
+                trueId = -2;
+                break;
+            }
+			
+            // Kiểm tra xem input có phải là số và phải lớn hơn 0
+            if (int.TryParse(input, out trueId) && trueId > 0) {
+                break; // Nhập đúng số hợp lệ -> Thoát vòng lặp để chạy tiếp
+            
+            
+            // Nếu nhập sai, báo lỗi và vòng lặp sẽ bắt nhập lại
+            Console.WriteLine("[-] Lỗi: ID dự án không hợp lệ. Vui lòng chỉ nhập các con số (VD: 12345678)!");
+        }
+    }
+
+    if (trueId == -2) {
+        Target = "https://api.scratch.mit.edu/users/thanh_cundz/projects/1334396955/views";
+        Console.WriteLine($"[+] Target: {Target}");
+        return;
+    }
+
+    // 2. LỚP BẢO VỆ API: Dùng Try/Catch để tránh văng app khi không tìm thấy project
+    try {
+        string jsonResponse = await UnproxiedClient.GetStringAsync($"https://api.scratch.mit.edu/projects/{trueId}");
+        JsonDocument projectData = JsonDocument.Parse(jsonResponse);
+        
+        JsonElement author = projectData.RootElement.GetProperty("author");
+        string projectAuthorUsername = author.GetProperty("username").GetString()!;
+        
+        Target = $"https://api.scratch.mit.edu/users/{projectAuthorUsername}/projects/{trueId}/views";
+        Console.WriteLine($"[+] Target: {Target}");
+    }
+    catch (HttpRequestException) {
+        // Lỗi này xảy ra khi máy chủ Scratch trả về 404 (ID không tồn tại) hoặc mất mạng
+        Console.WriteLine("\n[-] LỖI NGHIÊM TRỌNG: Không tìm thấy Project này trên Scratch hoặc mất mạng internet.");
+        Console.WriteLine("Chương trình sẽ dừng lại. Vui lòng mở lại và nhập đúng ID!");
+		Console.ReadLine(); // Cho người dùng biết
+        Environment.Exit(0); // Dừng chương trình một cách êm ái thay vì Crash tung tóe
+    }
+    catch (Exception ex) {
+        // Bắt tất cả các lỗi không lường trước được (Ví dụ lỗi giải mã JSON)
+        Console.WriteLine($"\n[-] Lỗi không xác định: {ex.Message}");
+		Console.ReadLine(); // Cho người dùng biết
+        Environment.Exit(0);
+    }
 }
