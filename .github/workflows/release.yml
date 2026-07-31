@@ -25,7 +25,7 @@ jobs:
         run: dotnet restore
 
       - name: Publish win-x64
-        run: dotnet publish bv.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o ./
+        run: dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o ./
         
       - name: Create Release
         uses: softprops/action-gh-release@v3
