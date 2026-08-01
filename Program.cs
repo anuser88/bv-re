@@ -97,14 +97,16 @@ public class Buff {
 		HttpClientHandler handler;
 		Payload = new StringContent("{}", Encoding.UTF8, "application/json");
 		foreach (string proxy in ProxiesToUse!) {
-			handler = new HttpClientHandler
-			{
-				Proxy = new WebProxy(proxy),
-				UseProxy = true
-			};
-			HttpClient ProxiedClient = new HttpClient(handler);
-			ProxiedClient.Timeout = TimeSpan.FromSeconds(10);
-			ProxiedClients.Add(ProxiedClient);
+			try {
+				handler = new HttpClientHandler
+				{
+					Proxy = new WebProxy(proxy),
+					UseProxy = true
+				};
+				HttpClient ProxiedClient = new HttpClient(handler);
+				ProxiedClient.Timeout = TimeSpan.FromSeconds(10);
+				ProxiedClients.Add(ProxiedClient);
+			} catch {}
 		}
 		int clientsCount = ProxiedClients.Count;
 		if (clientsCount == 0) throw new Exception("No proxy found!");
