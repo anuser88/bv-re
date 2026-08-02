@@ -13,17 +13,17 @@ namespace bvre;
 
 class Program {
 	static async Task Main() {
-		Buff buff = new();
-		await buff.SetTarget(-1);
-		await buff.GetProxies();
-		await buff.TestProxies();
+		Boost booster = new();
+		await booster.SetTarget(-1);
+		await booster.GetProxies();
+		await booster.TestProxies();
 		await Task.Delay(2000);
 		while (true) {
-			await buff.RunProxies();
+			await booster.RunProxies();
 		}
 	}
 }
-public class Buff {
+public class Boost {
 	private static string[] ProxiesSources = [
 		"https://raw.githubusercontent.com/TheSpeedX/PROXY-List/master/http.txt",
 		"https://raw.githubusercontent.com/TheSpeedX/PROXY-List/master/socks4.txt",
@@ -81,9 +81,11 @@ public class Buff {
 	}
 	public async Task GetProxies() {
 		int sourcesCount = ProxiesSources.Length;
-		Task<string[]>[] workers = new Task<string[]>[sourcesCount];
+		Task<string[]>[] workers = new Task<string[]>[sourcesCount+2];
+		workers[0] = PM();
+		workers[1] = GN();
 		for (int i = 0; i < sourcesCount; i++) {
-			workers[i] = GetProxiesFromSource(ProxiesSources[i]);
+			workers[i+2] = GetProxiesFromSource(ProxiesSources[i]);
 		}
 		HashSet<string> result = new();
 		foreach (string[] proxies in await Task.WhenAll(workers)) {
@@ -179,5 +181,37 @@ public class Buff {
 		string projectAuthorUsername = author.GetProperty("username").GetString()!;
 		Target = $"https://api.scratch.mit.edu/users/{projectAuthorUsername}/projects/{trueId}/views";
 		Console.WriteLine(Target);
+	}
+	private async Task<string[]> PM() {
+		try {
+			string content = await UnproxiedClient.GetStringAsync("https://freeproxies-api.website.proxymaven.com/proxies?per_page=100000");
+			JsonDocument jsonDoc = JsonDocument.Parse(content);
+			JsonElement data = jsonDoc.RootElement.GetProperty("proxies");
+			string[] proxies = data
+				.EnumerateArray()
+				.Select(e => e.GetProperty("proxy").GetString()!)
+				.ToArray();
+			Console.WriteLine($"Fetched {proxies.Length} proxies from PM");
+			return proxies;
+		} catch {
+			Console.WriteLine("Failed to fetch PM");
+			return new string[0];
+		}
+	}
+	private async Task<string[]> GN() {
+		try {
+			string content = await UnproxiedClient.GetStringAsync("https://proxylist.geonode.com/api/proxy-list?limit=500");
+			JsonDocument jsonDoc = JsonDocument.Parse(content);
+			JsonElement data = jsonDoc.RootElement.GetProperty("data");
+			string[] proxies = data
+				.EnumerateArray()
+				.Select(e => e.GetProperty("ip").GetString()! + ":" + e.GetProperty("port").GetString()!)
+				.ToArray();
+			Console.WriteLine($"Fetched {proxies.Length} proxies from GN");
+			return proxies;
+		} catch {
+			Console.WriteLine("Failed to fetch GN");
+			return new string[0];
+		}
 	}
 }
